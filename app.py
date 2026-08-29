@@ -14,17 +14,24 @@ TELEGRAM_CHAT_IDS = [cid.strip() for cid in chat_ids_raw.split(",") if cid.strip
 if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_IDS:
     raise RuntimeError("Telegram-inställningar eller chatt-ID:n saknas i .env-filen!")
 
-app = FastAPI()
+app = FastAPI(
+    title="Telegram Proxy",
+    description="Internt API för att skicka notifieringar via Telegram",
+    version="1.0.0",
+    root_path="/api/telegram",
+)
+
 
 class Message(BaseModel):
     text: str
 
+
 @app.post("/send")
 def send_to_telegram(msg: Message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    
+
     failed_sends = []
-    
+
     # Skicka samma meddelande till alla mottagare i listan
     for chat_id in TELEGRAM_CHAT_IDS:
         payload = {
@@ -35,11 +42,11 @@ def send_to_telegram(msg: Message):
         response = requests.post(url, json=payload)
         if response.status_code != 200:
             failed_sends.append(chat_id)
-            
+
     if failed_sends:
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Kunde inte skicka till följande chat_ids: {failed_sends}"
         )
-        
+
     return {"status": "skickat till alla mottagare"}
